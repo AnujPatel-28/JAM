@@ -1,0 +1,10 @@
+# Hosting security headers — Cloudflare Pages `_headers` format (bare path, no
+# colon; indented `Header: value` lines). Vite copies this file to dist/
+# verbatim, so it ships automatically on the next Pages deploy.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' https://www.youtube.com https://s.ytimg.com https://challenges.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://challenges.cloudflare.com; img-src 'self' https://img.youtube.com https://i.ytimg.com https://images.unsplash.com data:; media-src 'self' https://*.googlevideo.com; connect-src 'self' https://p4rcgqh8.ap-southeast.insforge.app wss://p4rcgqh8.ap-southeast.insforge.app https://noembed.com https://www.youtube.com https://challenges.cloudflare.com https://cloudflareinsights.com; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'; upgrade-insecure-requests
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Strict-Transport-Security: max-age=31536000; includeSubDomains
+  Permissions-Policy: camera=(), microphone=(), geolocation=()
