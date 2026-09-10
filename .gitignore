@@ -9,6 +9,7 @@ lerna-debug.log*
 
 node_modules
 dist
+coverage
 dist-ssr
 *.local
 
@@ -20,6 +21,7 @@ dist-ssr
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
+!.vscode/settings.json
 .idea
 .DS_Store
 *.suo
@@ -47,3 +49,10 @@ dist-ssr
 # Windows metadata
 desktop.ini
 Thumbs.db
+
+# Local-only agent context — never push to public GitHub
+# (kept on disk for agents, removed from tracking via `git rm --cached`)
+/ARCHITECTURE.md
+/SECURITY-AUDIT.md
+/security_hardening_plan.md
+/docs/security-fixes/
