@@ -47,7 +47,7 @@
   align-items: center;
   gap: 8px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
   border: 1px solid hsla(var(--hue), 10%, 40%, 0.3);
 }
 
@@ -134,7 +134,7 @@
   align-items: center;
   gap: 6px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
   border: 1px solid rgba(255, 255, 255, 0.2);
   z-index: 10;
 }
@@ -210,7 +210,8 @@
   overflow: hidden;
   position: relative;
   cursor: pointer;
-  transition: height var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
+  border: 1px solid hsla(var(--hue), 10%, 40%, 0.3);
 }
 
 .progress-bar:hover {
@@ -303,7 +304,7 @@
   background: var(--surface-color-light);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
   border: 1px solid transparent;
   display: flex;
   align-items: center;
@@ -406,11 +407,11 @@
   padding: 4px 10px;
   border-radius: 12px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .chat-quick-play:hover {
-  background: var(--accent-color);
+  background: var(--accent-solid-strong);
   color: white;
 }
 
@@ -434,12 +435,12 @@
   color: var(--text-primary);
   font-family: inherit;
   font-size: 0.95rem;
-  outline: none;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .chat-input:focus {
   border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px hsla(338, 88%, 60%, 0.22);
 }
 
 .send-button {
@@ -509,6 +510,17 @@
   color: var(--text-secondary);
   cursor: pointer;
   padding: 4px;
+  min-width: 32px;
+  min-height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+}
+
+.auth-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
 }
 
 .auth-form {
@@ -559,6 +571,7 @@
   cursor: pointer;
   text-decoration: underline;
   padding: 2px 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .auth-link-btn:disabled {
@@ -675,8 +688,8 @@
 }
 
 .lobby-login-btn:hover {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
+  background: var(--accent-solid-strong);
+  border-color: var(--accent-solid-strong);
   color: white;
 }
 
@@ -770,7 +783,7 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-secondary);
-  padding-left: 2px;
+  padding-inline-start: 2px;
 }
 
 .code-input {
@@ -786,8 +799,7 @@
   padding: 12px;
   border-radius: var(--border-radius-sm);
   color: var(--text-primary);
-  outline: none;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .code-input:focus {
@@ -804,11 +816,12 @@
   color: var(--text-primary);
   font-size: 0.95rem;
   outline: none;
-  transition: border-color var(--transition-fast);
+  transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
 }
 
 .name-input:focus {
   border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px hsla(340, 80%, 60%, 0.25);
 }
 
 .hero-join-btn {
@@ -832,7 +845,7 @@
 }
 
 .hero-join-btn:active {
-  scale: 0.96;
+  transform: scale(0.96);
 }
 
 .lobby-divider {
@@ -870,7 +883,7 @@
   font-weight: 600;
   font-size: 0.95rem;
   cursor: pointer;
-  transition: background-color var(--transition-fast), filter var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast), scale var(--transition-fast);
+  transition: background-color var(--transition-fast), filter var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .hero-create-btn:hover {
@@ -880,7 +893,7 @@
 }
 
 .hero-create-btn:active {
-  scale: 0.96;
+  transform: scale(0.96);
 }
 
 /* --- PUBLIC ROOMS DIRECTORY --- */
@@ -914,7 +927,7 @@
   padding: 6px 12px;
   border-radius: var(--border-radius-sm);
   background: var(--surface-color-light);
-  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast), scale var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .refresh-rooms-btn:hover {
@@ -922,7 +935,7 @@
 }
 
 .refresh-rooms-btn:active:not(:disabled) {
-  scale: 0.96;
+  transform: scale(0.96);
 }
 
 .spinning {
@@ -1092,17 +1105,17 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast), scale var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
 }
 
 .room-join-btn:hover:not(.disabled) {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
+  background: var(--accent-solid-strong);
+  border-color: var(--accent-solid-strong);
   color: white;
 }
 
 .room-join-btn:active:not(.disabled) {
-  scale: 0.96;
+  transform: scale(0.96);
 }
 
 .room-join-btn.disabled {
@@ -1134,7 +1147,7 @@
   font-size: 0.8rem;
   font-weight: 500;
   color: var(--text-secondary);
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .back-lobby-btn:hover {
@@ -1168,7 +1181,7 @@
   border: 1px solid hsla(var(--hue), 10%, 40%, 0.4);
   border-radius: 14px;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .room-code-pill:hover {
@@ -1262,7 +1275,7 @@
 }
 
 .member-role-badge {
-  font-size: 0.65rem;
+  font-size: 0.75rem;
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--accent-color);
@@ -1425,11 +1438,11 @@
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), scale var(--transition-fast);
+  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast);
 }
 
 .privacy-toggle-btn:active {
-  scale: 0.96;
+  transform: scale(0.96);
 }
 
 .privacy-toggle-btn.active {
@@ -1476,6 +1489,7 @@
   border-radius: 14px;
   font-size: 0.75rem;
   font-weight: 600;
+  font-variant-numeric: tabular-nums;
   background: hsla(var(--hue), 10%, 25%, 0.4);
   border: 1px solid hsla(var(--hue), 10%, 40%, 0.3);
   color: var(--text-secondary);
@@ -1553,7 +1567,7 @@
   background: transparent;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast), border-color var(--transition-fast);
 }
 
 .sidebar-tab-btn:hover {
@@ -1602,11 +1616,11 @@
   font-size: 0.85rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: background-color var(--transition-fast), color var(--transition-fast);
 }
 
 .request-song-btn:hover {
-  background: var(--accent-color);
+  background: var(--accent-solid-strong);
   color: white;
 }
 
@@ -1648,7 +1662,7 @@
   padding: 10px;
   border-radius: 12px;
   border: 1px solid hsla(var(--hue), 10%, 40%, 0.2);
-  transition: all var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .queue-item:hover {
@@ -1694,7 +1708,7 @@
   gap: 4px;
   min-width: 0;
   max-width: 100%;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
 }
 
@@ -1734,7 +1748,7 @@
   font-weight: 600;
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all var(--transition-fast);
+  transition: color var(--transition-fast), border-color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .upvote-btn:hover {
@@ -1780,11 +1794,16 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: color var(--transition-fast), background-color var(--transition-fast);
 }
 
 .queue-delete-btn:hover {
   color: #f87171;
+}
+
+.queue-delete-btn.armed {
+  color: white;
+  background: #b91c1c;
 }
 
 /* --- REQUEST MODAL --- */
@@ -1844,7 +1863,7 @@
   font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace);
   font-weight: 500;
   letter-spacing: 0.02em;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1), color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid transparent;
   backdrop-filter: blur(8px);
 }
@@ -1973,7 +1992,7 @@
 }
 
 .lobby-login-btn:hover {
-  background: var(--accent-gradient);
+  background: var(--accent-solid-strong);
   border-color: transparent;
   box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
@@ -2094,6 +2113,7 @@
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: var(--text-secondary);
+  padding-inline-start: 2px;
 }
 
 .input-with-label {
@@ -2131,7 +2151,6 @@
   border-color: var(--accent-color);
   box-shadow: 0 0 0 3px hsla(338, 88%, 60%, 0.22);
   background: rgba(255,255,255,0.07);
-  outline: none;
 }
 
 .hero-join-btn {
@@ -2155,17 +2174,17 @@
 .hero-create-btn {
   padding: 14px;
   border-radius: 12px;
-  background: var(--accent-gradient);
+  background: var(--accent-solid-strong);
   border: 1px solid hsla(338, 90%, 65%, 0.5);
   box-shadow: var(--shadow-glow), inset 0 1px 0 rgba(255,255,255,0.2);
   font-weight: 700;
 }
 
 .hero-create-btn:hover {
-  filter: brightness(1.06);
+  filter: brightness(1.08);
   box-shadow: 0 10px 36px hsla(338, 88%, 60%, 0.42), inset 0 1px 0 rgba(255,255,255,0.22);
   transform: translateY(-1px);
-  background: var(--accent-gradient);
+  background: var(--accent-solid-strong);
 }
 
 .lobby-divider {
@@ -2327,7 +2346,7 @@
 }
 
 .room-join-btn:hover:not(.disabled) {
-  background: var(--accent-gradient);
+  background: var(--accent-solid-strong);
   border-color: transparent;
   box-shadow: var(--shadow-glow);
   transform: translateY(-1px);
@@ -2401,6 +2420,13 @@
   background: rgba(255,255,255,0.05);
   border: 1px solid var(--border-subtle);
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+  padding-inline-end: 12px;
+}
+
+.auth-form .input-with-toggle {
+  padding-inline-end: 40px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .auth-form input:focus {
@@ -2409,9 +2435,14 @@
   outline: none;
 }
 
+.auth-form input:focus-visible {
+  outline: 2px solid var(--accent-color);
+  outline-offset: 2px;
+}
+
 .auth-submit {
   border-radius: 11px;
-  background: var(--accent-gradient);
+  background: var(--accent-solid-strong);
   box-shadow: var(--shadow-glow);
   height: 44px;
   font-weight: 700;
@@ -2456,7 +2487,7 @@
     padding-inline: 4px;
   }
   .lobby-hero-badge {
-    font-size: 0.68rem;
+    font-size: 0.75rem;
     max-width: calc(100vw - 28px);
   }
   .lobby-actions-card {
@@ -2626,7 +2657,7 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-subtle);
   color: var(--text-primary);
-  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast), scale var(--transition-fast);
+  transition: border-color var(--transition-fast), background-color var(--transition-fast), transform var(--transition-fast);
 }
 
 .recent-chip:hover {
@@ -2636,7 +2667,7 @@
 }
 
 .recent-chip:active {
-  scale: 0.96;
+  transform: scale(0.96);
 }
 
 .toast-error {
@@ -2713,7 +2744,10 @@
   .live-dot,
   .live-count i,
   .spinning,
-  .spinner {
+  .spinner,
+  .expiry-pill.warning,
+  .sync-status-pill.sync-adjusting .sync-status-dot,
+  .sync-status-pill.sync-seeking .sync-status-dot {
     animation: none;
   }
   * {

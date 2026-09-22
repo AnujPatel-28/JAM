@@ -1,4 +1,9 @@
 # JAM 🎵 — Listen Together in Real-Time
+
+[![CI](https://github.com/AnujPatel-28/JAM/actions/workflows/ci.yml/badge.svg)](https://github.com/AnujPatel-28/JAM/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Version](https://img.shields.io/github/v/release/AnujPatel-28/JAM?display_name=tag&sort=semver)](https://github.com/AnujPatel-28/JAM/releases)
+
 > Formerly "Wifi Jokey" (renamed 2026-09-05, see `docs/security-fixes/023-rename-to-jam.md`).
 
 > **A synchronized, ephemeral, collaborative audio lounge platform.**  
@@ -9,6 +14,8 @@
 ## 📖 Complete Technical Documentation
 
 For the full architectural breakdown, system design diagrams, database schemas, and deep dives into our technical decisions, see the **[Architecture & System Design Guide](ARCHITECTURE.md)**.
+
+Project contributors should also read [CONTRIBUTING.md](CONTRIBUTING.md). Repository conventions are summarized in [docs/REPOSITORY_GUIDE.md](docs/REPOSITORY_GUIDE.md), release and branching rules are documented in [docs/RELEASING.md](docs/RELEASING.md), and notable changes are recorded in [CHANGELOG.md](CHANGELOG.md).
 
 ---
 
@@ -44,7 +51,9 @@ For the full architectural breakdown, system design diagrams, database schemas, 
 
 ### 1. Clone and Install
 ```bash
-npm install
+git clone https://github.com/AnujPatel-28/JAM.git
+cd JAM
+npm ci
 ```
 
 ### 2. Configure Environment
@@ -88,4 +97,4 @@ node scripts/test-phase4-sync.mjs
 
 ## 📄 License
 
-MIT
+Released under the [MIT License](LICENSE).

@@ -539,7 +539,7 @@ export function useYouTubeMusic({
       if (blocked) {
         pendingAutoplayRef.current = true;
         console.warn('Listener playback needs user interaction to be audible.');
-        setError('Tap anywhere on the page to start the music.');
+        setError('Select anywhere on the page to start the music.');
       }
       setIsPlaying(true);
     } else if (!state.isPlaying && isPlayingRef.current && playerRef.current) {

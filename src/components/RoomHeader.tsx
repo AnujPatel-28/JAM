@@ -94,7 +94,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
             )}
           </div>
 
-          <button className="room-code-pill" onClick={handleCopyLink} title="Click to copy invite link">
+            <button className="room-code-pill" onClick={handleCopyLink} title="Click to copy invite link" aria-label="Copy invite link">
             <span className="pill-code">{roomCode}</span>
             {copied ? <Check size={13} color="var(--success-color)" /> : <Copy size={13} />}
           </button>
@@ -118,6 +118,8 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
           <button
             className="members-count-pill"
             onClick={() => setShowMembersDropdown(!showMembersDropdown)}
+            aria-expanded={showMembersDropdown}
+            aria-label="View active listeners"
             title="Click to view active listeners"
           >
             <Users size={14} />
@@ -161,7 +163,7 @@ export const RoomHeader: React.FC<RoomHeaderProps> = ({
           {isHost && <span className="host-dot" title="You are hosting" />}
           <span className="user-display">{userDisplayName}</span>
           {onSignOut && (
-            <button className="header-signout-btn" onClick={onSignOut} title="Sign Out">
+            <button className="header-signout-btn" onClick={onSignOut} title="Sign Out" aria-label="Sign out">
               <LogOut size={14} />
             </button>
           )}
