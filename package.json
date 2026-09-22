@@ -1,14 +1,21 @@
 {
-  "name": "wifi-jokey",
+  "name": "jam",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0",
+  "description": "A synchronized, ephemeral, collaborative audio lounge.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
+    "check": "npm run lint && npm run build",
     "preview": "vite preview"
   },
+  "engines": {
+    "node": ">=22.0.0",
+    "npm": ">=10.0.0"
+  },
+  "packageManager": "npm@11.6.2",
   "dependencies": {
     "@heroui/react": "^3.2.4",
     "@insforge/sdk": "^1.5.2",
