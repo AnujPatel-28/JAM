@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { X, Radio, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 export type AuthModalMode = 'signin' | 'signup' | null;
 
@@ -51,6 +52,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [resetToken, setResetToken] = useState<string | null>(null);
   const [newPassword, setNewPassword] = useState('');
   const [resetFailures, setResetFailures] = useState(0);
+  const panelRef = useDialogA11y(onClose);
 
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -113,7 +115,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         if (next >= 5) {
           setResetFailures(0);
           setOtp('');
-          setNotice('Too many incorrect codes. A fresh code is required — tap Resend code.');
+          setNotice('Too many incorrect codes. A fresh code is required — select Resend code.');
           setResendCooldown(60);
           setError(null);
         } else {
@@ -170,7 +172,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
           if (next >= 5) {
             setOtpFailures(0);
             setOtp('');
-            setNotice('Too many incorrect codes. A fresh code is required — tap Resend code.');
+            setNotice('Too many incorrect codes. A fresh code is required — select Resend code.');
             setResendCooldown(60);
             setError(null);
           } else {
@@ -210,12 +212,20 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   return (
     <div className="auth-overlay" onClick={onClose}>
-      <div className="auth-modal glass-panel" onClick={(e) => e.stopPropagation()}>
-        <button className="auth-close" onClick={onClose} title="Close">
+      <div
+        className="auth-modal glass-panel"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-modal-title"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="auth-close" onClick={onClose} title="Close" aria-label="Close dialog">
           <X size={16} />
         </button>
 
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+        <h3 id="auth-modal-title" style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
           <Radio size={18} color="var(--accent-color)" />
           {pendingEmail
             ? 'Verify your email'
@@ -242,6 +252,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <input
               type="email"
               placeholder="Email"
+              aria-label="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
@@ -271,6 +282,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="text"
               inputMode="numeric"
               placeholder="123456"
+              aria-label="Verification code"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               required
@@ -306,12 +318,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <input
                 type={showPassword ? 'text' : 'password'}
                 placeholder="New password (min 6 characters)"
+                aria-label="New password"
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
                 required
                 minLength={6}
                 autoComplete="new-password"
-                style={{ paddingRight: '40px', width: '100%', boxSizing: 'border-box' }}
+                className="input-with-toggle"
               />
               <button
                 type="button"
@@ -357,6 +370,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type="text"
                   placeholder="Display name"
+                  aria-label="Display name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -366,6 +380,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               <input
                 type="email"
                 placeholder="Email"
+                aria-label="Email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -375,12 +390,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
+                  aria-label="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   minLength={6}
                   autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
-                  style={{ paddingRight: '40px', width: '100%', boxSizing: 'border-box' }}
+                  className="input-with-toggle"
                 />
                 <button
                   type="button"
@@ -410,6 +426,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               type="text"
               inputMode="numeric"
               placeholder="123456"
+              aria-label="Verification code"
               value={otp}
               onChange={(e) => setOtp(e.target.value)}
               required

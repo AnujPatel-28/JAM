@@ -24,6 +24,15 @@ export const LobbyPage: React.FC = () => {
   const [targetPrivateRoom, setTargetPrivateRoom] = useState<RoomListItem | null>(null);
   const [toast, setToast] = useState<{ msg: string; kind: 'success' | 'error' } | null>(null);
   const [fieldError, setFieldError] = useState<string | null>(null);
+  const [errorField, setErrorField] = useState<'code' | 'name' | null>(null);
+  const setFieldErr = (field: 'code' | 'name', msg: string) => {
+    setErrorField(field);
+    setFieldError(msg);
+  };
+  const clearFieldError = () => {
+    setErrorField(null);
+    setFieldError(null);
+  };
   const [recentRooms, setRecentRooms] = useState<Array<{ code: string; name?: string; at: number }>>(() => {
     try {
       const raw = localStorage.getItem('wj_recent_rooms');
@@ -198,23 +207,22 @@ export const LobbyPage: React.FC = () => {
     const cleanCode = extractRoomCode(roomCodeInput);
     const cleanName = displayName.trim();
     if (cleanCode.length < 3) {
-      setFieldError('Enter the 3–8 character code from the invite. A full invite link works too.');
+      setFieldErr('code', 'Enter the 3–8 character code from the invite. A full invite link works too.');
       showToast('Enter the 3–8 character code from the invite.', 'error');
       return;
     }
     if (cleanName.length < 2) {
-      setFieldError('Choose a display name with at least 2 characters.');
+      setFieldErr('name', 'Choose a display name with at least 2 characters.');
       showToast('Choose a display name with at least 2 characters.', 'error');
       return;
     }
-    // Phase D (docs/013): block reserved/impersonating names before join.
     if (isReservedDisplayName(cleanName)) {
-      setFieldError('That name is reserved. Choose another display name.');
+      setFieldErr('name', 'That name is reserved. Choose another display name.');
       showToast('That name is reserved. Choose another display name.', 'error');
       return;
     }
 
-    setFieldError(null);
+    clearFieldError();
     setStoredDisplayName(cleanName);
     pushRecent(cleanCode);
     navigate(`/room/${cleanCode}`);
@@ -223,16 +231,16 @@ export const LobbyPage: React.FC = () => {
   const handleRoomCardClick = (room: RoomListItem) => {
     const cleanName = displayName.trim();
     if (cleanName.length < 2) {
-      setFieldError('Choose a display name with at least 2 characters.');
+      setFieldErr('name', 'Choose a display name with at least 2 characters.');
       showToast('Choose a display name with at least 2 characters.', 'error');
       return;
     }
     if (isReservedDisplayName(cleanName)) {
-      setFieldError('That name is reserved. Choose another display name.');
+      setFieldErr('name', 'That name is reserved. Choose another display name.');
       showToast('That name is reserved. Choose another display name.', 'error');
       return;
     }
-    setFieldError(null);
+    clearFieldError();
     setStoredDisplayName(cleanName);
     pushRecent(room.code, room.name);
     if (room.is_private) {
@@ -300,6 +308,7 @@ export const LobbyPage: React.FC = () => {
         </div>
       </header>
 
+      <main>
       {/* Hero Section */}
       <section className="lobby-hero" aria-labelledby="lobby-title">
         <div className="lobby-hero-badge">
@@ -326,21 +335,25 @@ export const LobbyPage: React.FC = () => {
                 className="code-input"
                 placeholder="JAM402"
                 value={roomCodeInput}
-                onChange={(e) => setRoomCodeInput(extractRoomCode(e.target.value))}
                 onPaste={(e) => {
                   const pasted = e.clipboardData.getData('text');
                   if (pasted && /room\//i.test(pasted)) {
                     e.preventDefault();
                     setRoomCodeInput(extractRoomCode(pasted));
+                    if (errorField === 'code') clearFieldError();
                   }
+                }}
+                onChange={(e) => {
+                  setRoomCodeInput(extractRoomCode(e.target.value));
+                  if (errorField === 'code') clearFieldError();
                 }}
                 maxLength={8}
                 inputMode="text"
                 autoCapitalize="characters"
                 autoCorrect="off"
                 spellCheck={false}
-                aria-describedby="room-code-hint"
-                aria-invalid={!!fieldError}
+                aria-describedby={errorField === 'code' ? 'room-code-error room-code-hint' : 'room-code-hint'}
+                aria-invalid={errorField === 'code'}
               />
             </div>
 
@@ -354,12 +367,12 @@ export const LobbyPage: React.FC = () => {
                 value={displayName}
                 onChange={(e) => {
                   setDisplayName(e.target.value);
-                  if (fieldError) setFieldError(null);
+                  if (errorField === 'name') clearFieldError();
                 }}
                 maxLength={24}
                 autoComplete="nickname"
-                aria-describedby="room-code-hint"
-                aria-invalid={!!fieldError}
+                aria-describedby={errorField === 'name' ? 'name-error' : undefined}
+                aria-invalid={errorField === 'name'}
               />
             </div>
 
@@ -373,7 +386,7 @@ export const LobbyPage: React.FC = () => {
             Got an invite link? Paste it in the code field. Letters A–Z and 0–9 only.
           </p>
           {fieldError && (
-            <p className="field-error" role="alert">{fieldError}</p>
+            <p id={errorField === 'code' ? 'room-code-error' : 'name-error'} className="field-error" role="alert">{fieldError}</p>
           )}
 
           {recentRooms.length > 0 && (
@@ -390,16 +403,16 @@ export const LobbyPage: React.FC = () => {
                       // same display-name rules here (length + reservation).
                       const cleanName = displayName.trim() || getStoredDisplayName();
                       if (cleanName.length < 2) {
-                        setFieldError('Choose a display name with at least 2 characters.');
+                        setFieldErr('name', 'Choose a display name with at least 2 characters.');
                         showToast('Choose a display name with at least 2 characters.', 'error');
                         return;
                       }
                       if (isReservedDisplayName(cleanName)) {
-                        setFieldError('That name is reserved. Choose another display name.');
+                        setFieldErr('name', 'That name is reserved. Choose another display name.');
                         showToast('That name is reserved. Choose another display name.', 'error');
                         return;
                       }
-                      setFieldError(null);
+                      clearFieldError();
                       setRoomCodeInput(r.code);
                       setStoredDisplayName(cleanName);
                       pushRecent(r.code, r.name);
@@ -554,6 +567,7 @@ export const LobbyPage: React.FC = () => {
           </>
         )}
       </section>
+      </main>
 
       <footer className="lobby-footer">
         <div className="lobby-footer-brand">

@@ -10,12 +10,14 @@
   --surface-color-glass: hsla(var(--hue), 14%, 13%, 0.62);
   --text-primary: hsl(var(--hue), 12%, 96%);
   --text-secondary: hsl(var(--hue), 10%, 68%);
-  --text-muted: hsl(var(--hue), 8%, 48%);
+  --text-muted: hsl(var(--hue), 8%, 54%);
   --accent-color: hsl(338, 88%, 60%);
   --accent-hover: hsl(338, 88%, 66%);
+  /* Filled buttons need white text ≥4.5:1 — solid + gradient stops darkened */
+  --accent-solid-strong: hsl(338, 88%, 48%);
   --accent-soft: hsla(338, 88%, 60%, 0.12);
   --accent-border: hsla(338, 88%, 60%, 0.35);
-  --accent-gradient: linear-gradient(135deg, #ff2e7e 0%, #ff5e62 55%, #ff9a5a 100%);
+  --accent-gradient: linear-gradient(135deg, #db286c 0%, #c7494c 55%, #a8663b 100%);
   --accent-gradient-soft: linear-gradient(135deg, hsla(338, 88%, 60%, 0.18), hsla(16, 90%, 62%, 0.12));
   --success-color: hsl(152, 72%, 52%);
   --warning-color: #fbbf24;

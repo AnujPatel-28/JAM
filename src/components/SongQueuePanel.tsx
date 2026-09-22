@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ThumbsUp, Play, Trash2, Plus, Music2 } from 'lucide-react';
 import type { QueuedSong } from '../hooks/useRoomQueue';
 import type { MusicTrack } from '../lib/providers/types';
@@ -24,6 +24,17 @@ export const SongQueuePanel: React.FC<SongQueuePanelProps> = ({
   onPlayQueuedSong,
   onDismissSong,
 }) => {
+  const [armedId, setArmedId] = useState<string | null>(null);
+
+  const handleDismiss = (id: string) => {
+    if (armedId === id) {
+      setArmedId(null);
+      onDismissSong(id);
+    } else {
+      setArmedId(id);
+    }
+  };
+
   return (
     <div className="queue-panel">
       <div className="queue-actions-header">
@@ -78,6 +89,7 @@ export const SongQueuePanel: React.FC<SongQueuePanelProps> = ({
                   className={`upvote-btn ${item.has_voted ? 'voted' : ''}`}
                   onClick={() => onToggleUpvote(item.id)}
                   title={item.has_voted ? 'Remove upvote' : 'Upvote song'}
+                  aria-label={item.has_voted ? `Remove upvote for ${item.title}` : `Upvote ${item.title}`}
                 >
                   <ThumbsUp size={14} fill={item.has_voted ? 'currentColor' : 'none'} />
                   <span>{item.vote_count}</span>
@@ -102,14 +114,17 @@ export const SongQueuePanel: React.FC<SongQueuePanelProps> = ({
                         )
                       }
                       title="Play track now (Host only)"
+                      aria-label={`Play ${item.title} now`}
                     >
                       <Play size={13} fill="currentColor" />
                     </button>
 
                     <button
-                      className="queue-delete-btn"
-                      onClick={() => onDismissSong(item.id)}
-                      title="Dismiss track"
+                      className={`queue-delete-btn${armedId === item.id ? ' armed' : ''}`}
+                      onClick={() => handleDismiss(item.id)}
+                      onBlur={() => setArmedId((a) => (a === item.id ? null : a))}
+                      title={armedId === item.id ? 'Click again to confirm' : 'Dismiss track'}
+                      aria-label={armedId === item.id ? `Confirm dismiss ${item.title}` : `Dismiss ${item.title}`}
                     >
                       <Trash2 size={13} />
                     </button>

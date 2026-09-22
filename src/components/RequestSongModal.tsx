@@ -3,6 +3,7 @@ import { X, Music, AlertCircle, Sparkles } from 'lucide-react';
 import { resolveYouTubeTrack, type YouTubeMetadata } from '../lib/youtubeMetadata';
 import { TurnstileWidget } from './TurnstileWidget';
 import { getTurnstileSiteKey, verifyTurnstileToken } from '../lib/turnstile';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface RequestSongModalProps {
   onClose: () => void;
@@ -23,6 +24,7 @@ export const RequestSongModal: React.FC<RequestSongModalProps> = ({ onClose, onS
   // leaking video IDs + letting slow responses overwrite newer previews).
   const debounceRef = useRef<number | null>(null);
   const resolveSeq = useRef(0);
+  const panelRef = useDialogA11y(onClose);
 
   useEffect(() => {
     return () => {
@@ -87,8 +89,16 @@ export const RequestSongModal: React.FC<RequestSongModalProps> = ({ onClose, onS
 
   return (
     <div className="auth-overlay" onClick={onClose}>
-      <div className="auth-modal glass-panel request-modal" onClick={(e) => e.stopPropagation()}>
-        <button className="auth-close" onClick={onClose} title="Close">
+      <div
+        className="auth-modal glass-panel request-modal"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="request-song-title"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="auth-close" onClick={onClose} title="Close" aria-label="Close dialog">
           <X size={18} />
         </button>
 
@@ -97,15 +107,16 @@ export const RequestSongModal: React.FC<RequestSongModalProps> = ({ onClose, onS
             <Music size={20} color="var(--accent-color)" />
           </div>
           <div>
-            <h3>Request a Song</h3>
+            <h3 id="request-song-title">Request a Song</h3>
             <p className="modal-subtitle">Add your favorite track to the room's upvote queue</p>
           </div>
         </div>
 
         <form onSubmit={handleSubmit} className="auth-form" style={{ marginTop: '16px' }}>
           <div className="form-group">
-            <label className="form-label">YouTube URL or Video ID</label>
+            <label className="form-label" htmlFor="request-song-url">YouTube URL or Video ID</label>
             <input
+              id="request-song-url"
               type="text"
               placeholder="e.g. https://youtu.be/... or dQw4w9WgXcQ"
               value={input}

@@ -451,7 +451,7 @@ export const RoomPage: React.FC = () => {
     return (
       <div className="room-barrier-container">
         <div className="spinner" />
-        <p style={{ marginTop: '16px', color: 'var(--text-secondary)' }}>
+        <p style={{ marginTop: '16px', color: 'var(--text-secondary)' }} role="status">
           Connecting to room {roomCode}...
         </p>
       </div>
@@ -466,7 +466,7 @@ export const RoomPage: React.FC = () => {
         <div className="room-barrier-container">
           <div className="room-barrier-card glass-panel">
             <Lock size={40} color="var(--accent-color)" />
-            <h2>Private Room</h2>
+            <h1>Private Room</h1>
             <p>
               Room <strong>{roomCode}</strong> is password-protected. Enter the room password to join.
             </p>
@@ -487,7 +487,7 @@ export const RoomPage: React.FC = () => {
       <div className="room-barrier-container">
         <div className="room-barrier-card glass-panel">
           <Clock size={40} color="#fbbf24" />
-          <h2>24-Hour Session Expired</h2>
+          <h1>24-Hour Session Expired</h1>
           <p>
             Room <strong>{roomCode}</strong> was active for 24 hours and has concluded. All chat messages and queue data have been permanently cleared.
           </p>
@@ -504,7 +504,7 @@ export const RoomPage: React.FC = () => {
       <div className="room-barrier-container">
         <div className="room-barrier-card glass-panel">
           <AlertCircle size={40} color="#f87171" />
-          <h2>Room is Currently Full</h2>
+          <h1>Room is Currently Full</h1>
           <p>
             Room <strong>{roomCode}</strong> has reached its maximum capacity of 5 listeners.
             Seats free up within ~45 seconds after someone closes their tab.
@@ -545,7 +545,7 @@ export const RoomPage: React.FC = () => {
       <div className="room-barrier-container">
         <div className="room-barrier-card glass-panel">
           <AlertCircle size={40} color="#f87171" />
-          <h2>Unable to Join</h2>
+          <h1>Unable to Join</h1>
           <p>{mapJoinError(joinError)}</p>
           <div className="room-barrier-actions">
             <button className="auth-submit" onClick={() => attemptJoin()}>
@@ -638,6 +638,7 @@ export const RoomPage: React.FC = () => {
               className="video-toggle-btn"
               onClick={() => setShowVideo(!showVideo)}
               title={showVideo ? 'Switch to Album Art' : 'Show YouTube Video'}
+              aria-label={showVideo ? 'Switch to album art' : 'Show YouTube video'}
             >
               {showVideo ? <ImageIcon size={14} /> : <Video size={14} />}
               {showVideo ? 'Cover Art' : 'Video Mode'}
@@ -689,8 +690,31 @@ export const RoomPage: React.FC = () => {
             <div
               className="progress-bar"
               ref={progressBarRef}
+              role={isHost ? 'slider' : undefined}
+              aria-label={isHost ? 'Seek position' : 'Playback position'}
+              aria-valuemin={isHost ? 0 : undefined}
+              aria-valuemax={isHost ? 100 : undefined}
+              aria-valuenow={isHost ? Math.round(progress) : undefined}
+              aria-valuetext={isHost ? `${timeElapsed} of ${timeTotal}` : undefined}
+              tabIndex={isHost ? 0 : -1}
               onClick={handleProgressBarClick}
-              title={isHost ? 'Click to seek' : ''}
+              onKeyDown={(e) => {
+                if (!isHost) return;
+                if (e.key === 'ArrowRight' || e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  seekByPercentage(Math.min(100, progress + 5));
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  seekByPercentage(Math.max(0, progress - 5));
+                } else if (e.key === 'Home') {
+                  e.preventDefault();
+                  seekByPercentage(0);
+                } else if (e.key === 'End') {
+                  e.preventDefault();
+                  seekByPercentage(100);
+                }
+              }}
+              title={isHost ? 'Click or use arrow keys to seek' : ''}
               style={{ cursor: isHost ? 'pointer' : 'default' }}
             >
               <div className="progress-fill" style={{ width: `${progress}%` }} />
@@ -701,15 +725,15 @@ export const RoomPage: React.FC = () => {
           {/* Host Playback Controls */}
           {isHost && (
             <div className="controls-row">
-              <button className="control-btn" onClick={prevTrack} title="Previous Track">
+              <button className="control-btn" onClick={prevTrack} title="Previous Track" aria-label="Previous track">
                 <SkipBack size={26} />
               </button>
 
-              <button className="control-btn play-btn" onClick={togglePlay} title={isPlaying ? 'Pause' : 'Play'}>
+              <button className="control-btn play-btn" onClick={togglePlay} title={isPlaying ? 'Pause' : 'Play'} aria-label={isPlaying ? 'Pause' : 'Play'}>
                 {isPlaying ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" style={{ marginLeft: '4px' }} />}
               </button>
 
-              <button className="control-btn" onClick={nextTrack} title="Next Track">
+              <button className="control-btn" onClick={nextTrack} title="Next Track" aria-label="Next track">
                 <SkipForward size={26} />
               </button>
             </div>
@@ -717,7 +741,7 @@ export const RoomPage: React.FC = () => {
 
           {/* Local Volume */}
           <div className="volume-control">
-            <button className="control-btn" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'}>
+            <button className="control-btn" onClick={toggleMute} title={isMuted ? 'Unmute' : 'Mute'} aria-label={isMuted ? 'Unmute' : 'Mute'}>
               {isMuted || volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
             </button>
             <input
@@ -727,6 +751,7 @@ export const RoomPage: React.FC = () => {
               value={isMuted ? 0 : volume}
               onChange={(e) => setVolume(Number(e.target.value))}
               className="volume-slider"
+              aria-label="Volume"
             />
             {isBuffering && (
               <span style={{ fontSize: '0.75rem', color: 'var(--accent-color)', marginLeft: '8px' }}>
@@ -768,6 +793,7 @@ export const RoomPage: React.FC = () => {
               <input
                 type="text"
                 className="chat-input"
+                aria-label="YouTube video URL or ID"
                 placeholder="Paste YouTube Video URL or ID..."
                 value={customUrlInput}
                 onChange={(e) => setCustomUrlInput(e.target.value)}
@@ -791,7 +817,7 @@ export const RoomPage: React.FC = () => {
       </main>
 
       {/* SIDEBAR: TABBED CHAT & QUEUE */}
-      <aside className="sidebar glass-panel">
+      <aside className="sidebar glass-panel" aria-label="Chat and queue">
         <div className="sidebar-tab-header">
           <button
             className={`sidebar-tab-btn ${sidebarTab === 'chat' ? 'active' : ''}`}
@@ -903,12 +929,13 @@ export const RoomPage: React.FC = () => {
               <input
                 type="text"
                 className="chat-input"
+                aria-label="Chat message"
                 placeholder="Type message or paste YouTube link..."
                 value={message}
                 onChange={(e) => setMessage(e.target.value)}
                 maxLength={500}
               />
-              <button type="submit" className="send-button" title="Send">
+              <button type="submit" className="send-button" title="Send" aria-label="Send message">
                 <Send size={18} />
               </button>
             </form>

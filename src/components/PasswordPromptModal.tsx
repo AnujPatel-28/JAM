@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Lock, X, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { useDialogA11y } from '../hooks/useDialogA11y';
 
 interface PasswordPromptModalProps {
   roomName: string;
@@ -24,6 +25,7 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
   const [cooldownUntil, setCooldownUntil] = useState(0);
   const [, setTick] = useState(0);
   const cooldownLeft = Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000));
+  const panelRef = useDialogA11y(onClose);
 
   // Tick so the cooldown button label counts down instead of freezing.
   useEffect(() => {
@@ -56,8 +58,16 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
 
   return (
     <div className="auth-overlay" onClick={onClose}>
-      <div className="auth-modal glass-panel" onClick={(e) => e.stopPropagation()}>
-        <button className="auth-close" onClick={onClose} title="Close">
+      <div
+        className="auth-modal glass-panel"
+        ref={panelRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="password-prompt-title"
+        tabIndex={-1}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <button className="auth-close" onClick={onClose} title="Close" aria-label="Close dialog">
           <X size={18} />
         </button>
 
@@ -66,7 +76,7 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
             <Lock size={20} color="var(--accent-color)" />
           </div>
           <div>
-            <h3>Private Room</h3>
+            <h3 id="password-prompt-title">Private Room</h3>
             <p className="modal-subtitle">
               Enter password for <strong style={{ color: 'var(--text-primary)' }}>{roomName}</strong> ({roomCode})
             </p>
@@ -75,9 +85,10 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
 
         <form onSubmit={handleSubmit} className="auth-form" style={{ marginTop: '16px' }}>
           <div className="form-group">
-            <label className="form-label">Password</label>
+            <label className="form-label" htmlFor="room-password">Password</label>
             <div style={{ position: 'relative' }}>
               <input
+                id="room-password"
                 type={showPassword ? 'text' : 'password'}
                 placeholder="Enter room password"
                 value={password}
@@ -85,7 +96,7 @@ export const PasswordPromptModal: React.FC<PasswordPromptModalProps> = ({
                 required
                 autoFocus
                 autoComplete="current-password"
-                style={{ paddingRight: '40px', width: '100%', boxSizing: 'border-box' }}
+                className="input-with-toggle"
               />
               <button
                 type="button"
