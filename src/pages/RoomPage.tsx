@@ -7,8 +7,6 @@ import {
   SkipBack,
   Send,
   Music,
-  Video,
-  Image as ImageIcon,
   Volume2,
   VolumeX,
   Plus,
@@ -77,7 +75,6 @@ export const RoomPage: React.FC = () => {
 
   // Player & Chat UI States
   const [message, setMessage] = useState('');
-  const [showVideo, setShowVideo] = useState(false);
   const [customUrlInput, setCustomUrlInput] = useState('');
   const [showCustomInput, setShowCustomInput] = useState(false);
 
@@ -95,6 +92,11 @@ export const RoomPage: React.FC = () => {
     if (toastTimerRef.current !== null) window.clearTimeout(toastTimerRef.current);
     toastTimerRef.current = window.setTimeout(() => setToast(null), 3000);
   };
+
+  // Latest playback flag for pre-hook closures (the overlay lifecycle effect
+  // is declared before useYouTubeMusic destructures isPlaying). Synced right
+  // after the hook below.
+  const playingNowRef = useRef(false);
 
   // 1. Join Room Pre-flight Validation
   // Returns an error string on failure (surfaced in the password modal),
@@ -286,7 +288,13 @@ export const RoomPage: React.FC = () => {
   useEffect(() => {
     if (!nowPlayingOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setNowPlayingOpen(false);
+      if (e.key !== 'Escape') return;
+      // No hiding the player mid-playback (RMF / III.I.9 background ban).
+      if (playingNowRef.current) {
+        showToast('Pause the music before hiding the player.');
+        return;
+      }
+      setNowPlayingOpen(false);
     };
     document.addEventListener('keydown', onKey);
     const prevOverflow = document.body.style.overflow;
@@ -305,6 +313,8 @@ export const RoomPage: React.FC = () => {
 
   // Swipe-down to dismiss, confined to the overlay head so overlay scroll
   // never fights the gesture. Reduced-motion: no live follow, just close.
+  // Blocked while playing: RMF/III.I.9 forbid hiding the player during
+  // playback (no background players).
   const onNpTouchStart = (e: React.TouchEvent) => {
     npDragRef.current = {
       startY: e.touches[0].clientY,
@@ -325,7 +335,13 @@ export const RoomPage: React.FC = () => {
   const onNpTouchEnd = () => {
     const d = npDragRef.current;
     npDragRef.current = null;
-    if (d && d.dy > 96) setNowPlayingOpen(false);
+    if (d && d.dy > 96) {
+      if (isPlaying) {
+        showToast('Pause the music before hiding the player.');
+      } else {
+        setNowPlayingOpen(false);
+      }
+    }
     setNpDragY(0);
   };
 
@@ -366,6 +382,8 @@ export const RoomPage: React.FC = () => {
     isBuffering,
     error: playbackError,
     syncStatus,
+    needsConsent,
+    grantConsent,
     togglePlay,
     seekByPercentage,
     setVolume,
@@ -380,6 +398,31 @@ export const RoomPage: React.FC = () => {
     roomId: roomData?.id,
     onTrackSkipped: showToast,
   });
+
+  // Keep the pre-hook Esc guard current with real playback state.
+  useEffect(() => {
+    playingNowRef.current = isPlaying;
+  }, [isPlaying]);
+
+  // While the music is playing the player must stay on-screen — playing with
+  // a collapsed phone tray would make it a prohibited "background player"
+  // (III.I.9). Auto-open the tray whenever local playback is active.
+  useEffect(() => {
+    if (!isPlaying) return;
+    if (window.matchMedia('(max-width: 640px)').matches && !nowPlayingOpen) {
+      setNowPlayingOpen(true);
+    }
+  }, [isPlaying, nowPlayingOpen]);
+
+  // Explicit listen consent CTA (III.C.2). On phones, open the now-playing
+  // tray FIRST so the player is on-screen (>half visible) before the gated
+  // play attempt runs inside grantConsent.
+  const handleStartListening = useCallback(() => {
+    if (window.matchMedia('(max-width: 640px)').matches) {
+      setNowPlayingOpen(true);
+    }
+    void grantConsent();
+  }, [grantConsent]);
 
   // 5. Hook Up Room-Scoped Chat Messages
   const { messages: chatMessages, sendMessage, isConnected, error: chatError } = useChatMessages(roomData?.id);
@@ -608,7 +651,18 @@ export const RoomPage: React.FC = () => {
             <div className="np-handle" aria-hidden="true" />
             <div className="np-title-row">
               <span className="np-title">Now Playing</span>
-              <button type="button" className="np-close" onClick={() => setNowPlayingOpen(false)} aria-label="Collapse player">
+              <button
+                type="button"
+                className="np-close"
+                onClick={() => {
+                  if (isPlaying) {
+                    showToast('Pause the music before hiding the player.');
+                    return;
+                  }
+                  setNowPlayingOpen(false);
+                }}
+                aria-label="Collapse player"
+              >
                 <ChevronDown size={18} aria-hidden="true" />
               </button>
             </div>
@@ -621,29 +675,37 @@ export const RoomPage: React.FC = () => {
           )}
 
           <div className="album-art-container">
-            <YouTubePlayer playerProps={playerProps} showVideo={showVideo} />
-
-            {!showVideo && (
-              <img
-                src={currentTrack.albumArt || getYouTubeThumbnail(currentTrack.id)}
-                alt={currentTrack.title}
-                onError={(e) => {
-                  (e.target as HTMLImageElement).src =
-                    'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?q=80&w=800&auto=format&fit=crop';
-                }}
-              />
-            )}
-
-            <button
-              className="video-toggle-btn"
-              onClick={() => setShowVideo(!showVideo)}
-              title={showVideo ? 'Switch to Album Art' : 'Show YouTube Video'}
-              aria-label={showVideo ? 'Switch to album art' : 'Show YouTube video'}
-            >
-              {showVideo ? <ImageIcon size={14} /> : <Video size={14} />}
-              {showVideo ? 'Cover Art' : 'Video Mode'}
-            </button>
+            {/* Always visible (>=200x200): the YouTube RMF bans hidden /
+                background players and requires a real on-screen viewport. */}
+            <YouTubePlayer playerProps={playerProps} />
           </div>
+
+          {/* YouTube source attribution (III.F.2.a) — in-flow, NEVER over the
+              player (RMF overlay ban). Logo links back to YouTube per the
+              Branding Guidelines. */}
+          <a
+            className="yt-attribution"
+            href="https://www.youtube.com"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Content is provided via the YouTube embedded player"
+          >
+            <img
+              src="https://developers.google.com/static/youtube/images/developed-with-youtube-sentence-case-dark.png"
+              alt="Developed with YouTube"
+              height={18}
+            />
+          </a>
+
+          {/* Explicit listen consent (III.C.2): sync never starts audio until
+              THIS user clearly initiates it. Sits below the player, never on
+              top of it. */}
+          {needsConsent && (
+            <button type="button" className="consent-start-btn" onClick={handleStartListening}>
+              <Play size={15} aria-hidden="true" />
+              Start listening
+            </button>
+          )}
 
           <div className="track-info">
             <h1 className="track-title" title={currentTrack.title}>
@@ -957,17 +1019,38 @@ export const RoomPage: React.FC = () => {
         )}
       </aside>
 
-      {/* MOBILE NOW-PLAYING MINI-BAR (phones only — the doorway to the overlay) */}
-      <button type="button" className="player-mini-bar" onClick={() => setNowPlayingOpen(true)} aria-expanded={nowPlayingOpen} aria-controls="now-playing-panel" aria-label={`Open now playing: ${currentTrack.title}`}>
-        <img src={currentTrack.albumArt || getYouTubeThumbnail(currentTrack.id)} alt="" aria-hidden="true" className="mini-art" />
-        <span className="mini-meta" aria-hidden="true">
-          <span className="mini-title">{currentTrack.title}</span>
-          <span className="mini-artist">{currentTrack.artist}</span>
-        </span>
-        <span className="mini-progress" aria-hidden="true">
-          <span className="mini-progress-fill" style={{ width: `${progress}%` }} />
-        </span>
-        <ChevronUp size={18} aria-hidden="true" className="mini-chevron" />
+      {/* MOBILE NOW-PLAYING MINI-BAR (phones only — the doorway to the overlay).
+          While consent is pending it doubles as the explicit "Start listening"
+          CTA (the tray holding the in-player button is collapsed by default). */}
+      <button
+        type="button"
+        className={`player-mini-bar${needsConsent ? ' consent-cta' : ''}`}
+        onClick={needsConsent ? handleStartListening : () => setNowPlayingOpen(true)}
+        aria-expanded={nowPlayingOpen}
+        aria-controls="now-playing-panel"
+        aria-label={needsConsent ? 'Start listening' : `Open now playing: ${currentTrack.title}`}
+      >
+        {needsConsent ? (
+          <>
+            <Play size={16} aria-hidden="true" />
+            <span className="mini-meta" aria-hidden="true">
+              <span className="mini-title">Start listening</span>
+              <span className="mini-artist">Tap to join the room&apos;s audio</span>
+            </span>
+          </>
+        ) : (
+          <>
+            <img src={currentTrack.albumArt || getYouTubeThumbnail(currentTrack.id)} alt="" aria-hidden="true" className="mini-art" />
+            <span className="mini-meta" aria-hidden="true">
+              <span className="mini-title">{currentTrack.title}</span>
+              <span className="mini-artist">{currentTrack.artist}</span>
+            </span>
+            <span className="mini-progress" aria-hidden="true">
+              <span className="mini-progress-fill" style={{ width: `${progress}%` }} />
+            </span>
+            <ChevronUp size={18} aria-hidden="true" className="mini-chevron" />
+          </>
+        )}
       </button>
 
       {/* MOBILE QUEUE BOTTOM SHEET (phones only — hidden on desktop via CSS) */}

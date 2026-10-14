@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Radio, Plus, ArrowRight, RefreshCw, LogIn, LogOut, CheckCircle2, AlertCircle, AudioWaveform, MessagesSquare, ListMusic, Lock, History } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { insforge } from '../lib/insforge';
@@ -575,6 +575,13 @@ export const LobbyPage: React.FC = () => {
           <span>JAM</span>
         </div>
         <span>Free for listeners · No app needed · You join muted, host runs the music</span>
+        <div className="lobby-footer-links">
+          <Link to="/privacy">Privacy</Link>
+          <Link to="/terms">Terms</Link>
+          <a href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">
+            YouTube ToS
+          </a>
+        </div>
       </footer>
 
       {/* Create Room Modal */}

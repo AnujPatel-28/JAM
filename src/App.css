@@ -98,6 +98,8 @@
 .album-art-container {
   width: 280px;
   height: 280px;
+  min-width: 200px;
+  min-height: 200px;
   border-radius: var(--border-radius-lg);
   overflow: hidden;
   box-shadow: 0 24px 48px -12px hsla(0, 0%, 0%, 0.5);
@@ -107,6 +109,63 @@
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+/* YouTube source attribution (III.F.2.a) — always BELOW the player, never
+   overlaying it (RMF bans overlays/frames on any part of the player). */
+.yt-attribution {
+  display: inline-flex;
+  margin-bottom: 14px;
+  opacity: 0.85;
+  transition: opacity var(--transition-fast);
+}
+
+.yt-attribution:hover {
+  opacity: 1;
+}
+
+.yt-attribution img {
+  height: 18px;
+  width: auto;
+  display: block;
+}
+
+/* Explicit listen consent CTA (III.C.2) — in-flow under the attribution,
+   never positioned over the iframe. */
+.consent-start-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+  padding: 10px 22px;
+  border-radius: 999px;
+  background: var(--accent-color);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: filter var(--transition-fast), transform var(--transition-fast);
+}
+
+.consent-start-btn:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* Phone mini-bar variant while consent is pending. */
+.player-mini-bar.consent-cta {
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.player-mini-bar.consent-cta .mini-title,
+.player-mini-bar.consent-cta .mini-artist {
+  color: #fff;
+}
+
+.player-mini-bar.consent-cta .mini-artist {
+  opacity: 0.85;
 }
 
 .album-art-container img {
@@ -120,30 +179,6 @@
   transform: scale(1.04);
 }
 
-.video-toggle-btn {
-  position: absolute;
-  bottom: 12px;
-  right: 12px;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  color: white;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 0.75rem;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  transition: background-color var(--transition-fast), border-color var(--transition-fast), color var(--transition-fast), box-shadow var(--transition-fast), transform var(--transition-fast);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  z-index: 10;
-}
-
-.video-toggle-btn:hover {
-  background: var(--accent-color);
-  border-color: var(--accent-color);
-}
-
 .youtube-iframe-container {
   width: 100%;
   height: 100%;
@@ -153,9 +188,9 @@
   width: 100%;
   height: 100%;
   border: none;
-  /* Native controls are disabled; block direct iframe taps that can still
-     pause/play locally and desync listeners from the host. */
-  pointer-events: none;
+  /* Standard player controls stay interactive (RMF forbids blocking player
+     features). Host sync re-aligns listeners within one tick if someone
+     taps pause locally. */
 }
 
 .track-info {
@@ -2405,6 +2440,145 @@
   color: var(--text-secondary);
 }
 
+.lobby-footer-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.lobby-footer-links a {
+  color: var(--text-muted);
+  text-decoration: none;
+  border-bottom: 1px solid transparent;
+  transition: color var(--transition-fast), border-color var(--transition-fast);
+}
+
+.lobby-footer-links a:hover {
+  color: var(--text-secondary);
+  border-bottom-color: var(--border-strong);
+}
+
+/* --- Legal pages (Privacy / Terms) --- */
+.legal-page {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 20px 72px;
+}
+
+.legal-header {
+  margin-bottom: 28px;
+}
+
+.legal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  text-decoration: none;
+  font-size: 0.85rem;
+  margin-bottom: 18px;
+}
+
+.legal-back:hover {
+  color: var(--text-secondary);
+}
+
+.legal-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legal-title-row h1 {
+  font-size: 1.7rem;
+}
+
+.legal-updated {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-top: 6px;
+}
+
+.legal-content section {
+  margin-bottom: 26px;
+}
+
+.legal-content h2 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+
+.legal-content p,
+.legal-content li {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.legal-content ul {
+  padding-left: 20px;
+}
+
+.legal-content li {
+  margin-bottom: 6px;
+}
+
+.legal-content a {
+  color: var(--accent-color);
+}
+
+/* --- First-run consent gate (III.A.2) --- */
+.legal-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: hsla(0, 0%, 0%, 0.72);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.legal-gate-card {
+  max-width: 460px;
+  padding: 28px 26px;
+  border-radius: 18px;
+}
+
+.legal-gate-card h2 {
+  font-size: 1.2rem;
+  margin-bottom: 10px;
+}
+
+.legal-gate-card p {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.legal-gate-card a {
+  color: var(--accent-color);
+}
+
+.legal-gate-accept {
+  width: 100%;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 12px;
+  background: var(--accent-color);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: filter var(--transition-fast);
+}
+
+.legal-gate-accept:hover {
+  filter: brightness(1.1);
+}
+
 /* Modals & toast polish */
 .auth-modal {
   border-radius: 20px;
@@ -2879,14 +3053,14 @@
     max-width: calc(100vw - 32px);
   }
 
-  /* --- P2: phone-sized player --- */
+  /* --- P2: phone-sized player (RMF floor: viewport stays >=200x200) --- */
   .player-section {
     padding: 16px;
   }
 
   .album-art-container {
-    width: 176px;
-    height: 176px;
+    width: 208px;
+    height: 208px;
     margin-bottom: 16px;
   }
 
