@@ -4,7 +4,6 @@ import type { YouTubeProps } from 'react-youtube';
 
 interface YouTubePlayerProps {
   playerProps: YouTubeProps;
-  showVideo?: boolean;
 }
 
 function hardenIframes(root: ParentNode) {
@@ -14,7 +13,12 @@ function hardenIframes(root: ParentNode) {
   });
 }
 
-export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ playerProps, showVideo = false }) => {
+// The player is ALWAYS rendered visibly. YouTube's RMF requires a viewport of
+// at least 200x200, and Developer Policies III.I.9 bans "background players"
+// (players not displayed on the screen the user is viewing) — the old 1px
+// offscreen/audio-only hack violated both. Album art and extras live around
+// this element, never instead of it.
+export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ playerProps }) => {
   const wrapRef = useRef<HTMLDivElement | null>(null);
 
   // 022: least-privilege iframe attrs. react-youtube + the YT IFrame API own
@@ -34,13 +38,11 @@ export const YouTubePlayer: React.FC<YouTubePlayerProps> = ({ playerProps, showV
       ref={wrapRef}
       className="youtube-embed-wrapper"
       style={{
-        position: showVideo ? 'relative' : 'absolute',
-        width: showVideo ? '100%' : '1px',
-        height: showVideo ? '100%' : '1px',
-        top: showVideo ? 'auto' : '-9999px',
-        left: showVideo ? 'auto' : '-9999px',
-        opacity: showVideo ? 1 : 0,
-        pointerEvents: showVideo ? 'auto' : 'none',
+        position: 'relative',
+        width: '100%',
+        height: '100%',
+        minHeight: 200,
+        minWidth: 200,
         overflow: 'hidden',
         borderRadius: 'inherit',
       }}

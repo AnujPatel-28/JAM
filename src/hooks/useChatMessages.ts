@@ -69,9 +69,12 @@ export function useChatMessages(roomId?: string) {
 
   // Connect & subscribe to the room-scoped realtime channel.
   useEffect(() => {
+    // Same guard as sync/queue: the legacy 'chat_messages' channel is
+    // disabled server-side, so don't subscribe until the room UUID is known.
+    if (!roomId) return;
     let isSubscribed = true;
     let offChannel: (() => void) | null = null;
-    const channelName = roomId ? `room:${roomId}:chat` : 'chat_messages';
+    const channelName = `room:${roomId}:chat`;
     const eventName = 'message';
 
     const handleIncomingEvent = (payload: any) => {

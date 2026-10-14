@@ -6,6 +6,7 @@ import { DEFAULT_YOUTUBE_TRACKS, getYouTubeThumbnail } from '../lib/providers/yo
 import { insforge } from '../lib/insforge';
 import { realtime } from '../lib/realtime';
 import { calibrateClock, getServerNow } from '../lib/clockSync';
+import { isMadeForKids } from '../lib/madeForKids';
 
 export interface SyncStatus {
   state: 'synced' | 'adjusting' | 'seeking';
@@ -22,6 +23,53 @@ export interface UseYouTubeMusicOptions {
   roomId?: string;
   /** Host-only: fired when an unplayable track is auto-skipped. */
   onTrackSkipped?: (message: string) => void;
+}
+
+// --- YouTube RMF / Developer Policy gates (Phase 0 compliance) --------------
+// RMF: an embedded player must show a viewport >= 200x200, and automatic
+// playback must not start until the player is visible with MORE THAN HALF of
+// it on the page/screen. III.I.9 additionally bans "background players"
+// (not displayed on the screen the user is viewing). Every programmatic
+// playVideo() below funnels through playWhenVisible().
+
+const PLAYER_MIN_PX = 200;
+
+function isPlayerMostlyVisible(): boolean {
+  if (typeof document === 'undefined') return false;
+  const el = document.querySelector('.youtube-embed-wrapper');
+  if (!el) return false;
+  const r = el.getBoundingClientRect();
+  // RMF minimum viewport — a collapsed/half-styled player never qualifies.
+  if (r.width < PLAYER_MIN_PX || r.height < PLAYER_MIN_PX) return false;
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+  const visW = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0));
+  const visH = Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+  const visibleArea = visW * visH;
+  return visibleArea >= r.width * r.height * 0.5;
+}
+
+const sleep = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
+
+/**
+ * Plays only once more than half the player is on-screen, retrying briefly so
+ * layout animations (mobile now-playing tray) can finish first. Returns false
+ * when the player never became eligible — callers arm pendingAutoplay instead
+ * of forcing a background start.
+ */
+async function playWhenVisible(player: YouTubePlayer, tries = 12): Promise<boolean> {
+  for (let i = 0; i < tries; i++) {
+    if (isPlayerMostlyVisible()) {
+      try {
+        await player.playVideo();
+        return true;
+      } catch {
+        return false;
+      }
+    }
+    await sleep(250);
+  }
+  return false;
 }
 
 export function useYouTubeMusic({
@@ -57,6 +105,13 @@ export function useYouTubeMusic({
   const hostIdRef = useRef<string | undefined>(hostId);
   const roomIdRef = useRef<string | undefined>(roomId);
   const pendingAutoplayRef = useRef(false);
+  // Per-user explicit listen consent (Developer Policies III.C.2 — YouTube
+  // actions must be clearly initiated by THIS user). Host Play button and the
+  // listener "Start listening" CTA grant it; sync never starts audio before it.
+  const consentGrantedRef = useRef(false);
+  const [needsConsent, setNeedsConsent] = useState(false);
+  // III.E.4.j: Made-For-Kids status of the current video (null = unknown).
+  const madeForKidsRef = useRef<boolean | null>(null);
   const lastSyncAtRef = useRef(0);
   const lastHostPlayingRef = useRef(false);
   const volumeRef = useRef(volume);
@@ -229,14 +284,27 @@ export function useYouTubeMusic({
     }
   }, [isMuted]);
 
-  // Play
+  // Play — invoked from the host's own control button, so this click IS the
+  // user's explicit, clearly-initiated action (III.C.2): grant consent here.
   const play = useCallback(async () => {
     if (!playerRef.current) return;
     try {
+      consentGrantedRef.current = true;
+      setNeedsConsent(false);
+      pendingAutoplayRef.current = false;
       // Update the ref before awaiting so in-flight interval ticks broadcast
       // the correct state even if they resolve after this call.
       isPlayingRef.current = true;
       clearPendingBroadcast();
+      if (!isPlayerMostlyVisible()) {
+        // Never start a background player (III.I.9) — arm a retry instead;
+        // the visibility-retry effect + user gestures pick it up on-screen.
+        pendingAutoplayRef.current = true;
+        setIsPlaying(true);
+        setError(null);
+        if (isHostRef.current) await broadcastSync(true);
+        return;
+      }
       await playerRef.current.playVideo();
       setIsPlaying(true);
       setError(null);
@@ -515,33 +583,55 @@ export function useYouTubeMusic({
       setTracks(next);
     }
 
-    // Sync Play/Pause
+    // Sync Play/Pause — programmatic starts require THIS user's explicit
+    // consent (III.C.2) and a >half-visible player (RMF autoplay rule).
     if (state.isPlaying && !isPlayingRef.current && playerRef.current) {
-      let blocked = false;
-      try {
-        // Await to avoid .catch() on void returns which throws TypeErrors
-        await playerRef.current.playVideo();
-        // Chrome/Android may silently ignore playVideo() (player stuck
-        // unstarted) or start muted under its autoplay policy. Give it a
-        // moment, then check the real player state.
-        await new Promise((r) => setTimeout(r, 1200));
-        const player = playerRef.current as unknown as {
-          getPlayerState?: () => Promise<number>;
-          isMuted?: () => Promise<boolean>;
-        };
-        const playerState = await player.getPlayerState?.().catch(() => undefined);
-        const playing = playerState === 1 || playerState === 3;
-        const muted = (await player.isMuted?.().catch(() => false)) === true;
-        blocked = !playing || muted;
-      } catch {
-        blocked = true;
-      }
-      if (blocked) {
+      if (!consentGrantedRef.current) {
+        // Do not start, do not claim isPlaying: show the consent CTA instead.
         pendingAutoplayRef.current = true;
-        console.warn('Listener playback needs user interaction to be audible.');
-        setError('Select anywhere on the page to start the music.');
+        setNeedsConsent(true);
+      } else {
+        let started = false;
+        let blocked = false;
+        try {
+          // Await to avoid .catch() on void returns which throws TypeErrors
+          started = await playWhenVisible(playerRef.current, 8);
+          if (started) {
+            // Chrome/Android may silently ignore playVideo() (player stuck
+            // unstarted) or start muted under its autoplay policy. Give it a
+            // moment, then check the real player state.
+            await sleep(1200);
+            const player = playerRef.current as unknown as {
+              getPlayerState?: () => Promise<number>;
+              isMuted?: () => Promise<boolean>;
+            };
+            const playerState = await player.getPlayerState?.().catch(() => undefined);
+            const playing = playerState === 1 || playerState === 3;
+            const muted = (await player.isMuted?.().catch(() => false)) === true;
+            blocked = !playing || muted;
+            if (blocked) started = false;
+          }
+        } catch {
+          blocked = true;
+        }
+        if (!started) {
+          // Consent exists — arm the gesture/visibility retries rather than
+          // forcing playback from a hidden or autoplay-blocked player.
+          pendingAutoplayRef.current = true;
+          if (!isPlayerMostlyVisible()) {
+            setError('Open the player to start listening.');
+          } else {
+            console.warn('Listener playback needs user interaction to be audible.');
+            setError('Select anywhere on the page to start the music.');
+          }
+        } else {
+          pendingAutoplayRef.current = false;
+          setError(null);
+        }
+        // Claim playing either way so the mobile tray can auto-open and make
+        // the player visible (playing must never coexist with a hidden player).
+        setIsPlaying(true);
       }
-      setIsPlaying(true);
     } else if (!state.isPlaying && isPlayingRef.current && playerRef.current) {
       try {
         await playerRef.current.pauseVideo();
@@ -606,9 +696,57 @@ export function useYouTubeMusic({
     return true;
   }, [fetchPlaybackState]);
 
+  // Explicit listener consent ("Start listening" CTA). Opens the audio path
+  // inside the user's gesture and starts playback only when the host is live
+  // AND the player is (or shortly becomes) >half visible.
+  const grantConsent = useCallback(async () => {
+    consentGrantedRef.current = true;
+    setNeedsConsent(false);
+    const player = playerRef.current;
+    if (!player) return;
+
+    try {
+      await player.unMute();
+      const target =
+        volumeTouchedRef.current || volumeRef.current > 0 ? volumeRef.current : 80;
+      await player.setVolume(target);
+    } catch {}
+
+    // Trusting a possibly stale sync flag is how we used to start silent
+    // audio — if recent syncs are missing, fetch the authoritative state and
+    // let applyPlaybackState reconcile (consent is already granted, so its
+    // play path runs under the normal visibility gate).
+    const syncAge = lastSyncAtRef.current > 0 ? Date.now() - lastSyncAtRef.current : Infinity;
+    if (syncAge > 8000) {
+      const state = await fetchPlaybackState();
+      if (state) void applyPlaybackState(state);
+      return;
+    }
+
+    if (!lastHostPlayingRef.current && !isPlayingRef.current) {
+      setError(null);
+      return;
+    }
+
+    const started = await playWhenVisible(player);
+    if (started) {
+      pendingAutoplayRef.current = false;
+      isPlayingRef.current = true;
+      setIsPlaying(true);
+      setError(null);
+    } else {
+      pendingAutoplayRef.current = true;
+      setError('Bring the player on screen to start listening.');
+    }
+  }, [applyPlaybackState, fetchPlaybackState]);
+
   // Room-Scoped Realtime Subscription
   useEffect(() => {
-    const channelName = roomId ? `room:${roomId}:sync` : 'player_sync';
+    // Don't touch realtime until the room UUID is known. The legacy
+    // 'player_sync' fallback is disabled server-side — subscribing to it
+    // while roomData loads always rejects and leaves a sticky banner.
+    if (!roomId) return;
+    const channelName = `room:${roomId}:sync`;
     let isSubscribed = true;
     let offChannel: (() => void) | null = null;
 
@@ -629,10 +767,19 @@ export function useYouTubeMusic({
     async function initSync() {
       try {
         await realtime.connect();
+        if (!isSubscribed) return;
         const sub = await realtime.subscribe(channelName);
+        if (!isSubscribed) return;
         if (sub && !sub.ok) {
           console.warn(`Realtime subscribe rejected for "${channelName}":`, sub.error);
           setError('Live sync is unavailable (channel subscription rejected).');
+        } else {
+          // Clear a stale rejection from a previous mount (e.g. the
+          // pre-join render) now that the room-scoped channel is live.
+          // Only clears this exact banner — never other playback errors.
+          setError((prev) =>
+            prev === 'Live sync is unavailable (channel subscription rejected).' ? null : prev,
+          );
         }
         // C1: channel-aware dispatch drops forged cross-room sync events.
         offChannel = realtime.onChannel(channelName, 'sync', handleSync);
@@ -710,67 +857,80 @@ export function useYouTubeMusic({
     return () => clearInterval(interval);
   }, []);
 
-  // Mobile browsers block unmuted autoplay: on the user's first interaction
-  // anywhere on the page, unmute and start playback.
+  // After consent, browsers may still block the first programmatic start —
+  // retry on the user's next gesture. NEVER starts playback without consent
+  // (III.C.2: playback must be clearly initiated by this user) and never
+  // without a >half-visible player (RMF / III.I.9).
   useEffect(() => {
-    const unlock = async () => {
-      if (!pendingAutoplayRef.current || !playerRef.current) return;
+    const retry = async () => {
+      if (!pendingAutoplayRef.current || !consentGrantedRef.current || !playerRef.current) return;
+      if (!lastHostPlayingRef.current && !isPlayingRef.current) {
+        pendingAutoplayRef.current = false;
+        return;
+      }
+      if (!isPlayerMostlyVisible()) return;
       const player = playerRef.current;
-      pendingAutoplayRef.current = false;
-
-      // Open the audio path inside the user gesture. If the user picked a
-      // volume themselves (even 0), respect it; otherwise default to 80.
       try {
         await player.unMute();
         const target =
           volumeTouchedRef.current || volumeRef.current > 0 ? volumeRef.current : 80;
         await player.setVolume(target);
-      } catch {}
-
-      // If recent syncs are missing/stale (e.g. we rejoined after a network
-      // blip and may have missed a pause), don't trust the cached flag —
-      // fetch the authoritative state before deciding to play.
-      const syncAge = lastSyncAtRef.current > 0 ? Date.now() - lastSyncAtRef.current : Infinity;
-      if (syncAge > 8000) {
-        const state = await fetchPlaybackState();
-        if (state) void applyPlaybackState(state);
-      }
-
-      // Host is paused — never start playback locally. Sound is ready
-      // (unmuted) for when the host resumes.
-      if (!lastHostPlayingRef.current) {
-        setError(null);
-        return;
-      }
-
-      try {
         await player.playVideo();
-        // Verify playback actually started; otherwise re-arm for next tap.
-        await new Promise((r) => setTimeout(r, 800));
-        const state = await (player as unknown as { getPlayerState?: () => Promise<number> })
-          .getPlayerState?.()
-          .catch(() => undefined);
-        if (state === 1 || state === 3) {
-          setIsPlaying(true);
-          setError(null);
-        } else {
-          pendingAutoplayRef.current = true;
-        }
+        pendingAutoplayRef.current = false;
+        isPlayingRef.current = true;
+        setIsPlaying(true);
+        setError(null);
       } catch {
         // Still blocked — keep the flag set so the next interaction retries.
-        pendingAutoplayRef.current = true;
       }
     };
 
-    window.addEventListener('pointerdown', unlock);
-    window.addEventListener('touchstart', unlock, { passive: true });
-    window.addEventListener('keydown', unlock);
+    window.addEventListener('pointerdown', retry);
+    window.addEventListener('touchstart', retry, { passive: true });
+    window.addEventListener('keydown', retry);
     return () => {
-      window.removeEventListener('pointerdown', unlock);
-      window.removeEventListener('touchstart', unlock);
-      window.removeEventListener('keydown', unlock);
+      window.removeEventListener('pointerdown', retry);
+      window.removeEventListener('touchstart', retry);
+      window.removeEventListener('keydown', retry);
     };
-  }, [applyPlaybackState, fetchPlaybackState]);
+  }, []);
+
+  // Visibility retry: consent exists but the player was off-screen (e.g. the
+  // mobile tray was collapsed when the host resumed). Polls until the player
+  // is >half visible, then starts — so "playing" never coexists with a
+  // hidden/background player for longer than the tray-open animation.
+  useEffect(() => {
+    if (!consentGrantedRef.current || !pendingAutoplayRef.current) return;
+    const interval = window.setInterval(async () => {
+      if (!pendingAutoplayRef.current || !consentGrantedRef.current || !playerRef.current) return;
+      if (!lastHostPlayingRef.current && !isPlayingRef.current) return;
+      if (!isPlayerMostlyVisible()) return;
+      try {
+        await playerRef.current.playVideo();
+        pendingAutoplayRef.current = false;
+        isPlayingRef.current = true;
+        setIsPlaying(true);
+        setError(null);
+      } catch {
+        // Keep pending — gesture retry remains as the backstop.
+      }
+    }, 500);
+    return () => window.clearInterval(interval);
+  }, [isPlaying, needsConsent]);
+
+  // III.E.4.j: look up Made-For-Kids status for every embedded video.
+  useEffect(() => {
+    madeForKidsRef.current = null;
+    const id = currentTrack.id;
+    if (!id) return;
+    let cancelled = false;
+    void isMadeForKids(id).then((value) => {
+      if (!cancelled) madeForKidsRef.current = value;
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [currentTrack.id]);
 
   // YouTube Component event handlers
   const onPlayerReady: NonNullable<YouTubeProps['onReady']> = useCallback(
@@ -816,9 +976,20 @@ export function useYouTubeMusic({
           // getVideoData optional
         }
 
-        if (autoPlay || isPlayingRef.current) {
-          await event.target.playVideo();
-          setIsPlaying(true);
+        // Automatic start requires this user's consent AND a >half-visible
+        // player (RMF autoplay rule) — never fire playVideo() blindly here.
+        if (autoPlay || isPlayingRef.current || lastHostPlayingRef.current) {
+          if (!consentGrantedRef.current) {
+            if (autoPlay || lastHostPlayingRef.current) setNeedsConsent(true);
+          } else {
+            const started = await playWhenVisible(event.target, 4);
+            if (started) {
+              pendingAutoplayRef.current = false;
+              setIsPlaying(true);
+            } else {
+              pendingAutoplayRef.current = true;
+            }
+          }
         }
       } catch (err) {
         console.warn('Error on YouTube player ready:', err);
@@ -835,6 +1006,14 @@ export function useYouTubeMusic({
         setIsPlaying(true);
         setIsBuffering(false);
         setError(null);
+        // Host: surface native iframe play/pause to the room (listeners' own
+        // transport is disabled, but the standard player controls stay live
+        // per RMF — when the HOST uses them, sync must follow).
+        if (isHostRef.current) {
+          isPlayingRef.current = true;
+          clearPendingBroadcast();
+          void broadcastSync(true);
+        }
         try {
           const d = await event.target.getDuration();
           if (typeof d === 'number' && !isNaN(d) && d > 0) {
@@ -844,17 +1023,35 @@ export function useYouTubeMusic({
       } else if (state === 2) { // Paused
         setIsPlaying(false);
         setIsBuffering(false);
+        if (isHostRef.current) {
+          isPlayingRef.current = false;
+          clearPendingBroadcast();
+          void broadcastSync(false);
+        }
       } else if (state === 3) { // Buffering
         setIsBuffering(true);
       } else if (state === 0) { // Ended
-        setIsPlaying(false);
         setIsBuffering(false);
         if (isHostRef.current) {
-           nextTrack(); // Only host auto-advances, listener will follow via sync
+          if (tracksRef.current.length > 1) {
+            // Auto-advance KEEPS the playing claim (do not setIsPlaying(false)):
+            // the track change recreates the embed, and the dynamic autoplay
+            // playerVar + onPlayerReady resume need isPlayingRef true to load
+            // the next video playing — otherwise the room would pause blip
+            // after every song. Single-track queues fall through to paused.
+            nextTrack();
+          } else {
+            setIsPlaying(false);
+            nextTrack();
+          }
+        } else {
+          // Listeners don't advance (host drives the queue); drop the local
+          // playing claim and wait for the host's next sync.
+          setIsPlaying(false);
         }
       }
     },
-    [nextTrack]
+    [nextTrack, broadcastSync, clearPendingBroadcast]
   );
 
   const onPlayerError: NonNullable<YouTubeProps['onError']> = useCallback(
@@ -907,6 +1104,10 @@ export function useYouTubeMusic({
     isBuffering,
     error,
     syncStatus,
+    // Consent gate (RMF/III.C.2): true while sync wants to play but this
+    // user hasn't explicitly started listening yet.
+    needsConsent,
+    grantConsent,
     timeElapsed: formatTime(currentTime),
     timeTotal: formatTime(duration),
 
@@ -930,13 +1131,22 @@ export function useYouTubeMusic({
         height: '100%',
         width: '100%',
         playerVars: {
-          autoplay: isPlaying ? 1 : 0,
-          controls: 0,
-          disablekb: 1,
-          fs: 0,
+          // nocookie domain = reduced pre-interaction tracking; baseline
+          // control for Made-For-Kids embeds (III.E.4.j).
+          host: 'https://www.youtube-nocookie.com',
+          // react-youtube RECREATES the embed on every videoId change and
+          // picks loadVideoById (plays) vs cueVideoById (stays paused) from
+          // this flag — so it must track "should continue playing" for track
+          // advances. It is still 0 on mount / whenever consent or visibility
+          // is missing, so no start can ever bypass the consent + playWhenVisible
+          // gates; the onPlayerReady path resumes those cases once eligible.
+          autoplay:
+            isPlaying && consentGrantedRef.current && isPlayerMostlyVisible() ? 1 : 0,
+          // Standard player controls/features must remain available (RMF:
+          // blocking them violates the Developer Policies).
+          controls: 1,
           modestbranding: 1,
           rel: 0,
-          // Keep audio-only mode working on iOS (prevents fullscreen takeover).
           playsinline: 1,
           origin: typeof window !== 'undefined' ? window.location.origin : '',
         },
